@@ -17,7 +17,7 @@
 ## 📁 專案結構
 
 ```
-object-finder-app/
+FindForYou/
 ├── backend/                  # Python 後端服務
 │   ├── main.py              # FastAPI 入口
 │   ├── detector.py          # YOLO-World 偵測器
