@@ -524,6 +524,74 @@ async def remove_class(class_name: str):
         }
 
 
+class FullClassRequest(BaseModel):
+    """完整類別定義請求"""
+    id: str
+    name_zh: str
+    prompts: List[str]
+
+
+@app.post("/api/classes/add_full")
+async def add_class_full(request: FullClassRequest):
+    """新增完整類別定義（含多個 prompts）"""
+    if detector is None:
+        raise HTTPException(status_code=503, detail="偵測器未就緒")
+    
+    # 檢查是否已存在
+    if request.id in detector.custom_classes:
+        return {"success": False, "message": f"類別 {request.id} 已存在"}
+    
+    # 新增到 class_definitions
+    new_def = {
+        "id": request.id,
+        "prompts": request.prompts if request.prompts else [request.id],
+        "name_zh": request.name_zh or request.id
+    }
+    
+    detector.class_definitions.append(new_def)
+    detector._rebuild_indices()
+    detector._update_model_classes()
+    detector._save_config()
+    
+    return {
+        "success": True,
+        "message": f"已新增類別: {request.id} ({len(request.prompts)} 個提示詞)",
+        "class_definition": new_def
+    }
+
+
+@app.post("/api/classes/update")
+async def update_class(request: FullClassRequest):
+    """更新類別定義（中文名稱和 prompts）"""
+    if detector is None:
+        raise HTTPException(status_code=503, detail="偵測器未就緒")
+    
+    # 找到現有定義
+    found = False
+    for i, def_ in enumerate(detector.class_definitions):
+        if def_["id"] == request.id:
+            detector.class_definitions[i] = {
+                "id": request.id,
+                "prompts": request.prompts if request.prompts else [request.id],
+                "name_zh": request.name_zh or request.id
+            }
+            found = True
+            break
+    
+    if not found:
+        return {"success": False, "message": f"類別 {request.id} 不存在"}
+    
+    detector._rebuild_indices()
+    detector._update_model_classes()
+    detector._save_config()
+    
+    return {
+        "success": True,
+        "message": f"已更新類別: {request.id}",
+        "classes": detector.custom_classes
+    }
+
+
 @app.post("/api/classes/reload")
 async def reload_classes():
     """重新載入模型類別設定"""

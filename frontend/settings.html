@@ -245,16 +245,17 @@
         
         <div class="card">
             <h2>🏷️ 偵測類別管理</h2>
-            <p style="color:#aaa; margin-bottom:20px;">設定 YOLO-World 要偵測的物品類別及中文名稱</p>
+            <p style="color:#aaa; margin-bottom:20px;">設定 YOLO-World 要偵測的物品類別及中文名稱。點擊類別可編輯提示詞。</p>
             
             <div id="classList" style="display:flex; flex-wrap:wrap; gap:8px; margin-bottom:20px;">
                 <!-- 動態填入 -->
             </div>
             
-            <div style="display:grid; grid-template-columns: 1fr 1fr auto; gap:12px; padding:16px; background:rgba(100,149,237,0.1); border-radius:12px; border:2px dashed rgba(100,149,237,0.3);">
-                <input type="text" id="newClassEn" placeholder="英文類別 (如: laptop)">
-                <input type="text" id="newClassZh" placeholder="中文名稱 (如: 筆電)">
-                <button class="btn btn-primary" onclick="addClass()">新增類別</button>
+            <div style="display:grid; grid-template-columns: 1fr 1fr 1fr auto; gap:12px; padding:16px; background:rgba(100,149,237,0.1); border-radius:12px; border:2px dashed rgba(100,149,237,0.3);">
+                <input type="text" id="newClassId" placeholder="類別 ID (如: mouse)">
+                <input type="text" id="newClassZh" placeholder="中文名稱 (如: 滑鼠)">
+                <input type="text" id="newClassPrompts" placeholder="提示詞 (逗號分隔)">
+                <button class="btn btn-primary" onclick="addClassWithPrompts()">新增類別</button>
             </div>
             
             <div style="margin-top:15px;">
@@ -453,77 +454,159 @@
             try {
                 const res = await fetch(`${API_BASE}/api/classes`);
                 const data = await res.json();
-                renderClassList(data.classes || [], data.class_names_zh || {});
+                renderClassList(data.classes || [], data.class_names_zh || {}, data.class_definitions || []);
             } catch (e) {
                 console.error('載入類別失敗', e);
             }
         }
         
-        function renderClassList(classes, classNamesZh) {
+        // 儲存完整的 class definitions 以便編輯
+        let currentClassDefs = [];
+        
+        function renderClassList(classes, classNamesZh, classDefs) {
             const container = document.getElementById('classList');
+            currentClassDefs = classDefs || [];
             
-            if (classes.length === 0) {
-                container.innerHTML = '<p style="color:#aaa;">尚未設定任何類別</p>';
+            if (!classDefs || classDefs.length === 0) {
+                // 舊格式或空列表
+                if (classes.length === 0) {
+                    container.innerHTML = '<p style="color:#aaa;">尚未設定任何類別</p>';
+                    return;
+                }
+                // 舊格式 fallback
+                container.innerHTML = classes.map(cls => {
+                    const zh = classNamesZh[cls] || cls;
+                    return `
+                        <div class="class-tag" style="display: inline-flex; align-items: center; gap: 8px; background: rgba(100,149,237,0.2); padding: 8px 12px; border-radius: 20px; font-size: 14px;">
+                            <span style="color:#6495ed;">${cls}</span>
+                            <span style="color:#aaa;">→</span>
+                            <span style="color:#fff;">${zh}</span>
+                            <button onclick="removeClass('${cls}')" style="background: rgba(245,87,108,0.5); border: none; color: #fff; width: 20px; height: 20px; border-radius: 50%; cursor: pointer; font-size: 12px;">✕</button>
+                        </div>
+                    `;
+                }).join('');
                 return;
             }
             
-            container.innerHTML = classes.map(cls => {
-                const zh = classNamesZh[cls] || cls;
+            // 新格式：顯示 prompts
+            container.innerHTML = classDefs.map(def => {
+                const id = def.id;
+                const zh = def.name_zh || id;
+                const prompts = def.prompts || [id];
+                const promptsShort = prompts.length > 2 ? prompts.slice(0, 2).join(', ') + '...' : prompts.join(', ');
+                
                 return `
-                    <div class="class-tag" style="
-                        display: inline-flex;
-                        align-items: center;
-                        gap: 8px;
-                        background: rgba(100,149,237,0.2);
-                        padding: 8px 12px;
-                        border-radius: 20px;
-                        font-size: 14px;
-                    ">
-                        <span style="color:#6495ed;">${cls}</span>
+                    <div class="class-tag" style="display: inline-flex; align-items: center; gap: 8px; background: rgba(100,149,237,0.2); padding: 8px 12px; border-radius: 20px; font-size: 14px; cursor: pointer;" onclick="editClassPrompts('${id}')">
+                        <span style="color:#6495ed;">${id}</span>
                         <span style="color:#aaa;">→</span>
                         <span style="color:#fff;">${zh}</span>
-                        <button onclick="removeClass('${cls}')" style="
-                            background: rgba(245,87,108,0.5);
-                            border: none;
-                            color: #fff;
-                            width: 20px;
-                            height: 20px;
-                            border-radius: 50%;
-                            cursor: pointer;
-                            font-size: 12px;
-                        ">✕</button>
+                        <span style="color:#888; font-size:11px; margin-left:4px;">(${prompts.length} 提示詞)</span>
+                        <button onclick="event.stopPropagation(); removeClass('${id}')" style="background: rgba(245,87,108,0.5); border: none; color: #fff; width: 20px; height: 20px; border-radius: 50%; cursor: pointer; font-size: 12px;">✕</button>
                     </div>
                 `;
             }).join('');
         }
         
-        async function addClass() {
-            const en = document.getElementById('newClassEn').value.trim().toLowerCase();
+        async function addClassWithPrompts() {
+            const id = document.getElementById('newClassId').value.trim().toLowerCase();
             const zh = document.getElementById('newClassZh').value.trim();
+            const promptsStr = document.getElementById('newClassPrompts').value.trim();
             
-            if (!en) {
-                alert('請輸入英文類別名稱');
+            if (!id) {
+                alert('請輸入類別 ID');
                 return;
             }
             
+            // 解析 prompts
+            let prompts = promptsStr ? promptsStr.split(',').map(p => p.trim()).filter(p => p) : [id];
+            if (prompts.length === 0) prompts = [id];
+            
             try {
-                await fetch(`${API_BASE}/api/classes/add`, {
+                await fetch(`${API_BASE}/api/classes/add_full`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ 
-                        class_name: en, 
-                        class_name_zh: zh || en 
+                        id: id, 
+                        name_zh: zh || id,
+                        prompts: prompts
                     })
                 });
                 
-                document.getElementById('newClassEn').value = '';
+                document.getElementById('newClassId').value = '';
                 document.getElementById('newClassZh').value = '';
+                document.getElementById('newClassPrompts').value = '';
                 
-                showToast(`已新增類別: ${en}`);
+                showToast(`已新增類別: ${id} (${prompts.length} 個提示詞)`);
                 loadClasses();
             } catch (e) {
                 console.error('新增類別失敗', e);
                 showToast('新增失敗');
+            }
+        }
+        
+        // 編輯類別的 prompts
+        function editClassPrompts(classId) {
+            const def = currentClassDefs.find(d => d.id === classId);
+            if (!def) return;
+            
+            const prompts = def.prompts || [classId];
+            const zh = def.name_zh || classId;
+            
+            // 建立 Modal
+            const modal = document.createElement('div');
+            modal.className = 'preview-modal';
+            modal.innerHTML = `
+                <div class="preview-content" style="max-width:500px; text-align:left;">
+                    <h3 style="margin-bottom:15px;">🏷️ 編輯類別: ${classId}</h3>
+                    <div style="margin-bottom:12px;">
+                        <label style="color:#aaa; display:block; margin-bottom:4px;">中文名稱</label>
+                        <input type="text" id="editClassZh" value="${zh}" style="width:100%;">
+                    </div>
+                    <div style="margin-bottom:12px;">
+                        <label style="color:#aaa; display:block; margin-bottom:4px;">提示詞（每行一個）</label>
+                        <textarea id="editClassPrompts" rows="6" style="width:100%; background:rgba(255,255,255,0.1); border:1px solid rgba(255,255,255,0.2); color:#fff; padding:10px; border-radius:8px;">${prompts.join('\n')}</textarea>
+                    </div>
+                    <div style="display:flex; gap:8px; justify-content:flex-end;">
+                        <button class="btn btn-secondary" onclick="this.closest('.preview-modal').remove()">取消</button>
+                        <button class="btn btn-primary" onclick="saveClassPrompts('${classId}')">儲存</button>
+                    </div>
+                </div>
+            `;
+            
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) modal.remove();
+            });
+            
+            document.body.appendChild(modal);
+        }
+        
+        async function saveClassPrompts(classId) {
+            const zh = document.getElementById('editClassZh').value.trim();
+            const promptsText = document.getElementById('editClassPrompts').value.trim();
+            const prompts = promptsText.split('\n').map(p => p.trim()).filter(p => p);
+            
+            if (prompts.length === 0) {
+                alert('至少需要一個提示詞');
+                return;
+            }
+            
+            try {
+                await fetch(`${API_BASE}/api/classes/update`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        id: classId, 
+                        name_zh: zh || classId,
+                        prompts: prompts
+                    })
+                });
+                
+                document.querySelector('.preview-modal')?.remove();
+                showToast(`已更新類別: ${classId}`);
+                loadClasses();
+            } catch (e) {
+                console.error('更新類別失敗', e);
+                showToast('更新失敗');
             }
         }
         

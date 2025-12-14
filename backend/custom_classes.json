@@ -1,34 +1,121 @@
 {
   "classes": [
-    "glasses",
-    "cell phone",
-    "wallet",
-    "keys",
-    "remote",
-    "book",
-    "cup",
-    "bottle",
-    "headphones",
-    "watch",
-    "bag",
-    "umbrella",
-    "scissors",
-    "pen"
-  ],
-  "class_names_zh": {
-    "glasses": "眼鏡",
-    "cell phone": "手機",
-    "wallet": "錢包",
-    "keys": "鑰匙",
-    "remote": "遙控器",
-    "book": "書",
-    "cup": "杯子",
-    "bottle": "水瓶",
-    "headphones": "耳機",
-    "watch": "手錶",
-    "bag": "包包",
-    "umbrella": "雨傘",
-    "scissors": "剪刀",
-    "pen": "筆"
-  }
+    {
+      "id": "glasses",
+      "prompts": [
+        "glasses",
+        "sunglasses",
+        "spectacles"
+      ],
+      "name_zh": "眼鏡"
+    },
+    {
+      "id": "cell phone",
+      "prompts": [
+        "cell phone",
+        "smartphone",
+        "mobile phone"
+      ],
+      "name_zh": "手機"
+    },
+    {
+      "id": "wallet",
+      "prompts": [
+        "wallet",
+        "purse"
+      ],
+      "name_zh": "錢包"
+    },
+    {
+      "id": "keys",
+      "prompts": [
+        "keys",
+        "key bunch"
+      ],
+      "name_zh": "鑰匙"
+    },
+    {
+      "id": "remote",
+      "prompts": [
+        "remote",
+        "remote control",
+        "TV remote"
+      ],
+      "name_zh": "遙控器"
+    },
+    {
+      "id": "book",
+      "prompts": [
+        "book",
+        "textbook"
+      ],
+      "name_zh": "書"
+    },
+    {
+      "id": "cup",
+      "prompts": [
+        "cup",
+        "mug"
+      ],
+      "name_zh": "杯子"
+    },
+    {
+      "id": "bottle",
+      "prompts": [
+        "bottle",
+        "water bottle",
+        "glass bottle"
+      ],
+      "name_zh": "水瓶"
+    },
+    {
+      "id": "headphones",
+      "prompts": [
+        "headphones",
+        "headset"
+      ],
+      "name_zh": "耳機"
+    },
+    {
+      "id": "watch",
+      "prompts": [
+        "watch",
+        "wrist watch",
+        "smart watch"
+      ],
+      "name_zh": "手錶"
+    },
+    {
+      "id": "bag",
+      "prompts": [
+        "bag",
+        "backpack",
+        "handbag"
+      ],
+      "name_zh": "包包"
+    },
+    {
+      "id": "umbrella",
+      "prompts": [
+        "umbrella"
+      ],
+      "name_zh": "雨傘"
+    },
+    {
+      "id": "scissors",
+      "prompts": [
+        "scissors"
+      ],
+      "name_zh": "剪刀"
+    },
+    {
+      "id": "pen",
+      "prompts": [
+        "pen",
+        "ballpoint pen",
+        "marker"
+      ],
+      "name_zh": "筆"
+    }
+  ]
 }

@@ -101,8 +101,11 @@ class ObjectDetector:
         self.surfaces = DEFAULT_SURFACES
         
         # 類別管理
-        self.custom_classes: List[str] = []
-        self.class_names_zh: Dict[str, str] = {}
+        self.class_definitions: List[Dict] = [] # 儲存完整的類別定義
+        self.custom_classes: List[str] = [] # 僅儲存 ID 列表 (給前端用)
+        self.class_names_zh: Dict[str, str] = {} # ID -> 中文名稱
+        self.prompt_map: Dict[str, str] = {} # Prompt -> ID
+        self.active_prompts: List[str] = [] # 給 YOLO 的所有 Prompts
         
         # 載入配置
         self._load_config()
@@ -110,27 +113,77 @@ class ObjectDetector:
     
     def _load_config(self):
         """載入自訂類別配置"""
-        if os.path.exists(self.config_path):
-            try:
+        try:
+            if os.path.exists(self.config_path):
                 with open(self.config_path, 'r', encoding='utf-8') as f:
                     config = json.load(f)
-                self.custom_classes = config.get("classes", DEFAULT_CLASSES)
-                self.class_names_zh = config.get("class_names_zh", DEFAULT_CLASS_NAMES_ZH)
-                print(f"✅ 載入自訂類別: {len(self.custom_classes)} 個")
-            except Exception as e:
-                print(f"⚠️ 載入配置失敗: {e}，使用預設值")
-                self.custom_classes = DEFAULT_CLASSES.copy()
-                self.class_names_zh = DEFAULT_CLASS_NAMES_ZH.copy()
-        else:
-            self.custom_classes = DEFAULT_CLASSES.copy()
-            self.class_names_zh = DEFAULT_CLASS_NAMES_ZH.copy()
-            self._save_config()
+                    
+                # 檢查這是否是新格式 (classes 是 list of dicts)
+                raw_classes = config.get("classes", [])
+                if raw_classes and isinstance(raw_classes[0], dict):
+                    self.class_definitions = raw_classes
+                else:
+                    # 舊格式轉換為新格式
+                    old_classes = config.get("classes", DEFAULT_CLASSES)
+                    old_names_zh = config.get("class_names_zh", DEFAULT_CLASS_NAMES_ZH)
+                    self.class_definitions = []
+                    for cls_id in old_classes:
+                        self.class_definitions.append({
+                            "id": cls_id,
+                            "prompts": [cls_id],
+                            "name_zh": old_names_zh.get(cls_id, cls_id)
+                        })
+            else:
+                # 使用預設值
+                self.class_definitions = []
+                for cls_id in DEFAULT_CLASSES:
+                    self.class_definitions.append({
+                        "id": cls_id,
+                        "prompts": [cls_id],
+                        "name_zh": DEFAULT_CLASS_NAMES_ZH.get(cls_id, cls_id)
+                    })
+                self._save_config()
+
+            # 重建索引和對照表
+            self._rebuild_indices()
+            print(f"✅ 載入自訂類別: {len(self.custom_classes)} 個 (共 {len(self.active_prompts)} 個提示詞)")
+
+        except Exception as e:
+            print(f"⚠️ 載入配置失敗: {e}，使用預設值")
+            self.class_definitions = []
+            for cls_id in DEFAULT_CLASSES:
+                self.class_definitions.append({
+                    "id": cls_id,
+                    "prompts": [cls_id],
+                    "name_zh": DEFAULT_CLASS_NAMES_ZH.get(cls_id, cls_id)
+                })
+            self._rebuild_indices()
+
+    def _rebuild_indices(self):
+        """從 class_definitions 重建所有輔助索引"""
+        self.custom_classes = []
+        self.class_names_zh = {}
+        self.prompt_map = {}
+        self.active_prompts = []
+        
+        for item in self.class_definitions:
+            cls_id = item["id"]
+            prompts = item.get("prompts", [cls_id])
+            name_zh = item.get("name_zh", cls_id)
+            
+            self.custom_classes.append(cls_id)
+            self.class_names_zh[cls_id] = name_zh
+            
+            for p in prompts:
+                # 確保 prompt 是字串且不重複 (雖然 logic 上同一個 prompt 指向不同 ID 會有歧義，這裡以後加入的為準或視為無效)
+                if p not in self.prompt_map:
+                    self.prompt_map[p] = cls_id
+                    self.active_prompts.append(p)
     
     def _save_config(self):
         """儲存自訂類別配置"""
         config = {
-            "classes": self.custom_classes,
-            "class_names_zh": self.class_names_zh
+            "classes": self.class_definitions
         }
         try:
             with open(self.config_path, 'w', encoding='utf-8') as f:
@@ -158,10 +211,8 @@ class ObjectDetector:
             else:
                 print("⚠️ CUDA 不可用，使用 CPU")
             
-            # 設定自訂類別
-            if hasattr(self.model, 'set_classes'):
-                self.model.set_classes(self.custom_classes)
-                print(f"✅ YOLO-World 類別已設定: {self.custom_classes}")
+            # 設定自訂類別 (使用所有 prompts)
+            self._update_model_classes()
             
             self.is_ready = True
             print(f"✅ YOLO-World 模型已載入: {self.model_path}")
@@ -169,7 +220,17 @@ class ObjectDetector:
         except Exception as e:
             print(f"❌ 模型載入失敗: {e}")
             self.is_ready = True  # 使用模擬模式
-    
+
+    def _update_model_classes(self):
+        """更新模型的類別列表"""
+        if self.model and hasattr(self.model, 'set_classes'):
+            # YOLO-World 需要 list of strings
+            try:
+                self.model.set_classes(self.active_prompts)
+                print(f"✅ YOLO-World 類別已更新: {len(self.active_prompts)} 個提示詞")
+            except Exception as e:
+                print(f"❌ 設定模型類別失敗: {e}")
+
     # ========================================
     # 類別管理 API
     # ========================================
@@ -178,20 +239,39 @@ class ObjectDetector:
         """取得目前偵測類別列表"""
         return {
             "classes": self.custom_classes,
-            "class_names_zh": self.class_names_zh
+            "class_names_zh": self.class_names_zh,
+            "class_definitions": self.class_definitions  # 新增：完整定義
         }
     
     def set_classes(self, classes: List[str]) -> bool:
-        """設定要偵測的類別"""
+        """設定要偵測的類別 (舊版 API 相容)
+        注意：這裡傳入的是 ID 列表。如果 ID 存在於現有定義中，保留它；
+        如果不存在，則新增一個單一 prompt 的類別。
+        這會覆寫目前的 class_definitions。
+        """
         try:
-            self.custom_classes = classes
+            new_definitions = []
             
-            # 更新模型
-            if self.model and hasattr(self.model, 'set_classes'):
-                self.model.set_classes(classes)
+            # 建立現有定義的 lookup
+            current_def_map = {d["id"]: d for d in self.class_definitions}
             
+            for cls_id in classes:
+                if cls_id in current_def_map:
+                    new_definitions.append(current_def_map[cls_id])
+                else:
+                    # 新增預設
+                    new_definitions.append({
+                        "id": cls_id,
+                        "prompts": [cls_id],
+                        "name_zh": cls_id
+                    })
+            
+            self.class_definitions = new_definitions
+            self._rebuild_indices()
+            self._update_model_classes()
             self._save_config()
-            print(f"✅ 類別已更新: {classes}")
+            
+            print(f"✅ 類別已更新 (Set): {classes}")
             return True
         except Exception as e:
             print(f"❌ 設定類別失敗: {e}")
@@ -202,15 +282,17 @@ class ObjectDetector:
         if class_name in self.custom_classes:
             return False
         
-        self.custom_classes.append(class_name)
-        if class_name_zh:
-            self.class_names_zh[class_name] = class_name_zh
+        new_def = {
+            "id": class_name,
+            "prompts": [class_name],
+            "name_zh": class_name_zh if class_name_zh else class_name
+        }
         
-        # 更新模型
-        if self.model and hasattr(self.model, 'set_classes'):
-            self.model.set_classes(self.custom_classes)
-        
+        self.class_definitions.append(new_def)
+        self._rebuild_indices()
+        self._update_model_classes()
         self._save_config()
+        
         print(f"✅ 新增類別: {class_name}")
         return True
     
@@ -219,14 +301,11 @@ class ObjectDetector:
         if class_name not in self.custom_classes:
             return False
         
-        self.custom_classes.remove(class_name)
-        self.class_names_zh.pop(class_name, None)
-        
-        # 更新模型
-        if self.model and hasattr(self.model, 'set_classes'):
-            self.model.set_classes(self.custom_classes)
-        
+        self.class_definitions = [d for d in self.class_definitions if d["id"] != class_name]
+        self._rebuild_indices()
+        self._update_model_classes()
         self._save_config()
+        
         print(f"✅ 移除類別: {class_name}")
         return True
     
@@ -285,15 +364,22 @@ class ObjectDetector:
         frame_with_boxes = frame.copy()
         for det in detections:
             x1, y1, x2, y2 = [int(x) for x in det.bbox]
-            label = f"{det.object_class} {det.confidence:.0%}"
+            # 顯示 ID 和 中文名
+            name_zh = self.class_names_zh.get(det.object_class, det.object_class)
+            label = f"{name_zh} {det.confidence:.0%}"
             
             # 畫框
             cv2.rectangle(frame_with_boxes, (x1, y1), (x2, y2), (0, 255, 0), 2)
             
             # 畫標籤背景
-            (w, h), _ = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, 0.6, 2)
+            # 支援中文顯示需要特殊處理 (OpenCV 不支援中文)，這裡先用英文 ID 如果無法顯示中文
+            # 為了簡單起見，這裡還是主要顯示 ID，或者需要用 PIL 畫中文
+            # 暫時顯示 ID + 分數
+            display_text = f"{det.object_class} {det.confidence:.0%}"
+            
+            (w, h), _ = cv2.getTextSize(display_text, cv2.FONT_HERSHEY_SIMPLEX, 0.6, 2)
             cv2.rectangle(frame_with_boxes, (x1, y1 - 25), (x1 + w + 10, y1), (0, 255, 0), -1)
-            cv2.putText(frame_with_boxes, label, (x1 + 5, y1 - 8), 
+            cv2.putText(frame_with_boxes, display_text, (x1 + 5, y1 - 8), 
                        cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 0), 2)
         
         # 儲存圖片
@@ -323,13 +409,21 @@ class ObjectDetector:
             for box, conf, cls in zip(boxes, confs, clss):
                 cls_id = int(cls)
                 
-                # 取得類別名稱
+                # 取得預測的 prompt
                 if isinstance(names, dict):
-                    class_name = names.get(cls_id, f"class_{cls_id}")
-                elif cls_id < len(self.custom_classes):
-                    class_name = self.custom_classes[cls_id]
+                    predicted_prompt = names.get(cls_id, f"class_{cls_id}")
+                elif cls_id < len(self.active_prompts):
+                    predicted_prompt = self.active_prompts[cls_id]
                 else:
-                    class_name = f"class_{cls_id}"
+                    predicted_prompt = f"class_{cls_id}"
+                
+                # 映射回 Canonical ID
+                # 如果找不到 (通常不應該發生，除非 YOLO 輸出怪怪的)，就直接用 prompt
+                canonical_id = self.prompt_map.get(predicted_prompt, predicted_prompt)
+                
+                # [Debug] 顯示觸發的 Prompt
+                if predicted_prompt != canonical_id:
+                     print(f"🔍 [Multi-Prompt] Detected '{predicted_prompt}' => Mapped to '{canonical_id}'")
                 
                 bbox = [float(x) for x in box]
                 
@@ -339,7 +433,7 @@ class ObjectDetector:
                 surface, region = self._get_surface_region(cx, cy)
                 
                 detections.append(Detection(
-                    object_class=class_name,
+                    object_class=canonical_id, # 這裡是重點：存入統一的 ID
                     confidence=float(conf),
                     bbox=bbox,
                     surface=surface,
