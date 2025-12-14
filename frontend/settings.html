@@ -1,0 +1,753 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>設定 | 日常物品搜尋助手</title>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Noto Sans TC', sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            color: #fff;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        .header {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+        .back-btn {
+            background: rgba(255,255,255,0.1);
+            border: none;
+            color: #fff;
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .back-btn:hover { background: rgba(255,255,255,0.2); }
+        h1 { font-size: 24px; }
+        
+        .card {
+            background: rgba(255,255,255,0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 16px;
+            padding: 24px;
+            margin-bottom: 20px;
+        }
+        .card h2 {
+            font-size: 18px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .camera-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        .camera-item {
+            display: grid;
+            grid-template-columns: 80px 1fr 1fr auto;
+            gap: 12px;
+            align-items: center;
+            padding: 16px;
+            background: rgba(0,0,0,0.2);
+            border-radius: 12px;
+        }
+        .camera-id {
+            font-weight: bold;
+            color: #38ef7d;
+        }
+        input, select {
+            background: rgba(255,255,255,0.1);
+            border: 1px solid rgba(255,255,255,0.2);
+            color: #fff;
+            padding: 10px 14px;
+            border-radius: 8px;
+            font-size: 14px;
+            width: 100%;
+        }
+        input:focus, select:focus {
+            outline: none;
+            border-color: #38ef7d;
+        }
+        input::placeholder { color: rgba(255,255,255,0.5); }
+        
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, #38ef7d, #11998e);
+            color: #fff;
+        }
+        .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 4px 15px rgba(56,239,125,0.4); }
+        .btn-danger {
+            background: #f5576c;
+            color: #fff;
+        }
+        .btn-secondary {
+            background: rgba(255,255,255,0.1);
+            color: #fff;
+        }
+        
+        .add-camera-form {
+            display: grid;
+            grid-template-columns: 100px 1fr 1fr auto;
+            gap: 12px;
+            padding: 16px;
+            background: rgba(56,239,125,0.1);
+            border-radius: 12px;
+            border: 2px dashed rgba(56,239,125,0.3);
+            margin-top: 16px;
+        }
+        
+        .toast {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: #38ef7d;
+            color: #000;
+            padding: 12px 24px;
+            border-radius: 8px;
+            animation: slideIn 0.3s ease;
+        }
+        @keyframes slideIn {
+            from { transform: translateY(100px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+        
+        .status {
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+        }
+        .status.active { background: rgba(56,239,125,0.2); color: #38ef7d; }
+        .status.inactive { background: rgba(245,87,108,0.2); color: #f5576c; }
+        
+        .preview-modal {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.9);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+        .preview-content {
+            background: rgba(30,30,50,0.95);
+            border-radius: 16px;
+            padding: 20px;
+            max-width: 90%;
+            text-align: center;
+        }
+        .preview-content img {
+            max-width: 100%;
+            border-radius: 8px;
+            margin-bottom: 15px;
+        }
+        .btn-group {
+            display: flex;
+            gap: 8px;
+        }
+        .btn-preview {
+            background: #4a90d9;
+            color: #fff;
+            padding: 8px 12px;
+            font-size: 12px;
+        }
+        
+        /* Toggle Switch */
+        .switch {
+            position: relative;
+            width: 60px;
+            height: 34px;
+        }
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background-color: rgba(245,87,108,0.5);
+            transition: .4s;
+            border-radius: 34px;
+        }
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 26px;
+            width: 26px;
+            left: 4px;
+            bottom: 4px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+        input:checked + .slider {
+            background-color: #38ef7d;
+        }
+        input:checked + .slider:before {
+            transform: translateX(26px);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <a href="/" class="back-btn">← 返回</a>
+            <h1>⚙️ 設定</h1>
+        </div>
+        
+        <div class="card">
+            <h2>📹 攝影機配置</h2>
+            <p style="color:#aaa; margin-bottom:20px;">設定每個攝影機的名稱與所在位置，偵測結果會自動使用攝影機位置。</p>
+            
+            <div class="camera-list" id="cameraList">
+                <!-- 動態填入 -->
+            </div>
+            
+            <div class="add-camera-form" id="addForm">
+                <input type="number" id="newCameraId" placeholder="編號" min="0" max="10">
+                <input type="text" id="newCameraName" placeholder="攝影機名稱">
+                <input type="text" id="newCameraLocation" placeholder="所在位置">
+                <button class="btn btn-primary" onclick="addCamera()">新增</button>
+            </div>
+        </div>
+        
+        <div class="card">
+            <h2>🔍 偵測到的攝影機</h2>
+            <p style="color:#aaa; margin-bottom:20px;">系統偵測到的可用攝影機清單</p>
+            <div id="availableCameras">載入中...</div>
+        </div>
+        
+        <div class="card">
+            <h2>🏷️ 偵測類別管理</h2>
+            <p style="color:#aaa; margin-bottom:20px;">設定 YOLO-World 要偵測的物品類別及中文名稱</p>
+            
+            <div id="classList" style="display:flex; flex-wrap:wrap; gap:8px; margin-bottom:20px;">
+                <!-- 動態填入 -->
+            </div>
+            
+            <div style="display:grid; grid-template-columns: 1fr 1fr auto; gap:12px; padding:16px; background:rgba(100,149,237,0.1); border-radius:12px; border:2px dashed rgba(100,149,237,0.3);">
+                <input type="text" id="newClassEn" placeholder="英文類別 (如: laptop)">
+                <input type="text" id="newClassZh" placeholder="中文名稱 (如: 筆電)">
+                <button class="btn btn-primary" onclick="addClass()">新增類別</button>
+            </div>
+            
+            <div style="margin-top:15px;">
+                <button class="btn btn-secondary" onclick="reloadModel()" style="width:100%;">
+                    🔄 重新載入模型（套用新類別）
+                </button>
+            </div>
+        </div>
+        
+        <div class="card">
+            <h2>⏱️ 自動偵測</h2>
+            <p style="color:#aaa; margin-bottom:20px;">啟用後系統會定時自動掃描攝影機並記錄物品位置</p>
+            
+            <div style="display:flex; align-items:center; justify-content:space-between; padding:16px; background:rgba(0,0,0,0.2); border-radius:12px;">
+                <div>
+                    <span style="font-size:16px;">自動偵測</span>
+                    <span id="schedulerStatus" style="margin-left:10px; padding:4px 12px; border-radius:12px; font-size:12px; background:rgba(245,87,108,0.2); color:#f5576c;">已停止</span>
+                </div>
+                <label class="switch">
+                    <input type="checkbox" id="schedulerSwitch" onchange="toggleScheduler()">
+                    <span class="slider"></span>
+                </label>
+            </div>
+            
+            <div style="margin-top:15px; display:grid; grid-template-columns: 1fr auto; gap:12px; align-items:center;">
+                <label style="color:#aaa;">偵測間隔（秒）</label>
+                <input type="number" id="intervalInput" value="30" min="5" max="300" style="width:100px; text-align:center;" onchange="setDetectionInterval()">
+            </div>
+        </div>
+        
+        <div class="card">
+            <h2>⭐ 常用物品快捷</h2>
+            <p style="color:#aaa; margin-bottom:20px;">自訂首頁顯示的常用物品快捷按鈕</p>
+            
+            <div id="quickItemsList" style="display:flex; flex-wrap:wrap; gap:8px; margin-bottom:20px;">
+                <!-- 動態填入 -->
+            </div>
+            
+            <div style="display:grid; grid-template-columns: 1fr 1fr 80px auto; gap:12px; padding:16px; background:rgba(255,215,0,0.1); border-radius:12px; border:2px dashed rgba(255,215,0,0.3);">
+                <input type="text" id="newQuickItemName" placeholder="物品名稱">
+                <input type="text" id="newQuickItemIcon" placeholder="圖示 (如: 📱)">
+                <input type="number" id="newQuickItemOrder" placeholder="順序" min="1" max="10" value="1">
+                <button class="btn btn-primary" onclick="addQuickItem()">新增</button>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        const API_BASE = 'http://localhost:8000';
+        
+        async function loadConfig() {
+            try {
+                const res = await fetch(`${API_BASE}/api/cameras/config`);
+                const data = await res.json();
+                renderCameraList(data.cameras || {});
+            } catch (e) {
+                console.error('載入配置失敗', e);
+            }
+        }
+        
+        async function loadAvailableCameras() {
+            try {
+                const res = await fetch(`${API_BASE}/api/cameras`);
+                const data = await res.json();
+                const container = document.getElementById('availableCameras');
+                
+                if (data.cameras && data.cameras.length > 0) {
+                    container.innerHTML = data.cameras.map(c => 
+                        `<span class="status active" style="margin-right:8px;">📹 ${c.name}</span>`
+                    ).join('');
+                } else {
+                    container.innerHTML = '<span style="color:#aaa">未偵測到攝影機</span>';
+                }
+            } catch (e) {
+                document.getElementById('availableCameras').innerHTML = '<span style="color:#f5576c">無法連接後端</span>';
+            }
+        }
+        
+        function renderCameraList(cameras) {
+            const container = document.getElementById('cameraList');
+            const entries = Object.entries(cameras);
+            
+            if (entries.length === 0) {
+                container.innerHTML = '<p style="color:#aaa;text-align:center;padding:20px;">尚未配置任何攝影機</p>';
+                return;
+            }
+            
+            container.innerHTML = entries.map(([id, cam]) => `
+                <div class="camera-item" data-id="${id}">
+                    <span class="camera-id">攝影機 ${id}</span>
+                    <input type="text" value="${cam.name}" placeholder="名稱" onchange="updateCamera('${id}', 'name', this.value)">
+                    <input type="text" value="${cam.location}" placeholder="位置" onchange="updateCamera('${id}', 'location', this.value)">
+                    <div class="btn-group">
+                        <button class="btn btn-preview" onclick="previewCamera('${id}')">👁 預覽</button>
+                        <button class="btn btn-danger" onclick="deleteCamera('${id}')">刪除</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+        
+        async function previewCamera(id) {
+            showToast('載入預覽中...');
+            
+            try {
+                const res = await fetch(`${API_BASE}/api/cameras/${id}/preview`);
+                const data = await res.json();
+                
+                if (data.success) {
+                    showPreviewModal(id, data.image);
+                } else {
+                    showToast('無法取得預覽');
+                }
+            } catch (e) {
+                console.error('預覽失敗', e);
+                showToast('預覽失敗');
+            }
+        }
+        
+        function showPreviewModal(cameraId, imageData) {
+            const modal = document.createElement('div');
+            modal.className = 'preview-modal';
+            modal.innerHTML = `
+                <div class="preview-content">
+                    <h3 style="margin-bottom:15px;">📹 攝影機 ${cameraId} 預覽</h3>
+                    <img src="${imageData}" alt="預覽">
+                    <div>
+                        <button class="btn btn-secondary" onclick="this.closest('.preview-modal').remove()">關閉</button>
+                        <button class="btn btn-primary" onclick="previewCamera('${cameraId}'); this.closest('.preview-modal').remove();">重新整理</button>
+                    </div>
+                </div>
+            `;
+            
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) modal.remove();
+            });
+            
+            document.body.appendChild(modal);
+        }
+        
+        async function updateCamera(id, field, value) {
+            const item = document.querySelector(`.camera-item[data-id="${id}"]`);
+            const name = item.querySelectorAll('input')[0].value;
+            const location = item.querySelectorAll('input')[1].value;
+            
+            await fetch(`${API_BASE}/api/cameras/config`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ camera_id: id, name, location, enabled: true })
+            });
+            
+            showToast('配置已儲存');
+        }
+        
+        async function addCamera() {
+            const id = document.getElementById('newCameraId').value;
+            const name = document.getElementById('newCameraName').value || `攝影機 ${id}`;
+            const location = document.getElementById('newCameraLocation').value || '未設定';
+            
+            if (!id) { alert('請輸入攝影機編號'); return; }
+            
+            await fetch(`${API_BASE}/api/cameras/config`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ camera_id: id, name, location, enabled: true })
+            });
+            
+            document.getElementById('newCameraId').value = '';
+            document.getElementById('newCameraName').value = '';
+            document.getElementById('newCameraLocation').value = '';
+            
+            showToast('攝影機已新增');
+            loadConfig();
+        }
+        
+        async function deleteCamera(id) {
+            if (!confirm(`確定要刪除攝影機 ${id} 的配置？`)) return;
+            
+            await fetch(`${API_BASE}/api/cameras/config/${id}`, { method: 'DELETE' });
+            showToast('配置已刪除');
+            loadConfig();
+        }
+        
+        function showToast(msg) {
+            const toast = document.createElement('div');
+            toast.className = 'toast';
+            toast.textContent = msg;
+            document.body.appendChild(toast);
+            setTimeout(() => toast.remove(), 3000);
+        }
+        
+        // ========================================
+        // 類別管理功能
+        // ========================================
+        
+        async function loadClasses() {
+            try {
+                const res = await fetch(`${API_BASE}/api/classes`);
+                const data = await res.json();
+                renderClassList(data.classes || [], data.class_names_zh || {});
+            } catch (e) {
+                console.error('載入類別失敗', e);
+            }
+        }
+        
+        function renderClassList(classes, classNamesZh) {
+            const container = document.getElementById('classList');
+            
+            if (classes.length === 0) {
+                container.innerHTML = '<p style="color:#aaa;">尚未設定任何類別</p>';
+                return;
+            }
+            
+            container.innerHTML = classes.map(cls => {
+                const zh = classNamesZh[cls] || cls;
+                return `
+                    <div class="class-tag" style="
+                        display: inline-flex;
+                        align-items: center;
+                        gap: 8px;
+                        background: rgba(100,149,237,0.2);
+                        padding: 8px 12px;
+                        border-radius: 20px;
+                        font-size: 14px;
+                    ">
+                        <span style="color:#6495ed;">${cls}</span>
+                        <span style="color:#aaa;">→</span>
+                        <span style="color:#fff;">${zh}</span>
+                        <button onclick="removeClass('${cls}')" style="
+                            background: rgba(245,87,108,0.5);
+                            border: none;
+                            color: #fff;
+                            width: 20px;
+                            height: 20px;
+                            border-radius: 50%;
+                            cursor: pointer;
+                            font-size: 12px;
+                        ">✕</button>
+                    </div>
+                `;
+            }).join('');
+        }
+        
+        async function addClass() {
+            const en = document.getElementById('newClassEn').value.trim().toLowerCase();
+            const zh = document.getElementById('newClassZh').value.trim();
+            
+            if (!en) {
+                alert('請輸入英文類別名稱');
+                return;
+            }
+            
+            try {
+                await fetch(`${API_BASE}/api/classes/add`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        class_name: en, 
+                        class_name_zh: zh || en 
+                    })
+                });
+                
+                document.getElementById('newClassEn').value = '';
+                document.getElementById('newClassZh').value = '';
+                
+                showToast(`已新增類別: ${en}`);
+                loadClasses();
+            } catch (e) {
+                console.error('新增類別失敗', e);
+                showToast('新增失敗');
+            }
+        }
+        
+        async function removeClass(className) {
+            if (!confirm(`確定要刪除類別「${className}」？`)) return;
+            
+            try {
+                await fetch(`${API_BASE}/api/classes/${className}`, {
+                    method: 'DELETE'
+                });
+                showToast(`已刪除類別: ${className}`);
+                loadClasses();
+            } catch (e) {
+                console.error('刪除類別失敗', e);
+            }
+        }
+        
+        async function reloadModel() {
+            showToast('正在重新載入模型...');
+            
+            try {
+                const res = await fetch(`${API_BASE}/api/classes/reload`, {
+                    method: 'POST'
+                });
+                const data = await res.json();
+                
+                if (data.success) {
+                    showToast('模型已重新載入！');
+                } else {
+                    showToast('重新載入失敗');
+                }
+            } catch (e) {
+                console.error('重新載入失敗', e);
+                showToast('重新載入失敗');
+            }
+        }
+        
+        // ========================================
+        // 自動偵測控制
+        // ========================================
+        
+        async function loadSchedulerStatus() {
+            try {
+                const res = await fetch(`${API_BASE}/api/health`);
+                const data = await res.json();
+                
+                const switchEl = document.getElementById('schedulerSwitch');
+                const statusEl = document.getElementById('schedulerStatus');
+                
+                if (data.scheduler_running) {
+                    switchEl.checked = true;
+                    statusEl.style.background = 'rgba(56,239,125,0.2)';
+                    statusEl.style.color = '#38ef7d';
+                    statusEl.textContent = '運行中';
+                } else {
+                    switchEl.checked = false;
+                    statusEl.style.background = 'rgba(245,87,108,0.2)';
+                    statusEl.style.color = '#f5576c';
+                    statusEl.textContent = '已停止';
+                }
+            } catch (e) {
+                console.error('載入排程器狀態失敗', e);
+            }
+        }
+        
+        async function toggleScheduler() {
+            const switchEl = document.getElementById('schedulerSwitch');
+            const statusEl = document.getElementById('schedulerStatus');
+            const action = switchEl.checked ? 'start' : 'stop';
+            
+            try {
+                const res = await fetch(`${API_BASE}/api/scheduler/${action}`, {
+                    method: 'POST'
+                });
+                const data = await res.json();
+                
+                if (data.success) {
+                    if (switchEl.checked) {
+                        statusEl.style.background = 'rgba(56,239,125,0.2)';
+                        statusEl.style.color = '#38ef7d';
+                        statusEl.textContent = '運行中';
+                        showToast('自動偵測已啟動');
+                    } else {
+                        statusEl.style.background = 'rgba(245,87,108,0.2)';
+                        statusEl.style.color = '#f5576c';
+                        statusEl.textContent = '已停止';
+                        showToast('自動偵測已停止');
+                    }
+                }
+            } catch (e) {
+                console.error('切換排程器失敗', e);
+                switchEl.checked = !switchEl.checked;
+                showToast('操作失敗');
+            }
+        }
+        
+        async function setDetectionInterval() {
+            const interval = parseInt(document.getElementById('intervalInput').value);
+            
+            if (interval < 5 || interval > 300) {
+                showToast('間隔必須在 5-300 秒之間');
+                return;
+            }
+            
+            try {
+                await fetch(`${API_BASE}/api/scheduler/interval`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ interval })
+                });
+                showToast(`偵測間隔已設為 ${interval} 秒`);
+            } catch (e) {
+                console.error('設定間隔失敗', e);
+            }
+        }
+        
+        // ========================================
+        // 常用物品管理
+        // ========================================
+        
+        const DEFAULT_QUICK_ITEMS = [
+            { name: '手機', icon: '📱', order: 1 },
+            { name: '鑰匙', icon: '🔑', order: 2 },
+            { name: '眼鏡', icon: '👓', order: 3 },
+            { name: '錢包', icon: '👛', order: 4 },
+            { name: '耳機', icon: '🎧', order: 5 },
+            { name: '遙控器', icon: '📺', order: 6 }
+        ];
+        
+        function getQuickItems() {
+            const saved = localStorage.getItem('quickItems');
+            return saved ? JSON.parse(saved) : DEFAULT_QUICK_ITEMS;
+        }
+        
+        function saveQuickItems(items) {
+            localStorage.setItem('quickItems', JSON.stringify(items));
+        }
+        
+        function loadQuickItems() {
+            const items = getQuickItems();
+            renderQuickItemsList(items);
+        }
+        
+        function renderQuickItemsList(items) {
+            const container = document.getElementById('quickItemsList');
+            
+            if (items.length === 0) {
+                container.innerHTML = '<p style="color:#aaa;">尚未設定常用物品</p>';
+                return;
+            }
+            
+            container.innerHTML = items.map(item => `
+                <div class="class-tag" style="
+                    display: inline-flex;
+                    align-items: center;
+                    gap: 8px;
+                    background: rgba(255,215,0,0.2);
+                    padding: 8px 12px;
+                    border-radius: 20px;
+                    font-size: 14px;
+                ">
+                    <span>${item.icon}</span>
+                    <span style="color:#fff;">${item.name}</span>
+                    <button onclick="removeQuickItem('${item.name}')" style="
+                        background: rgba(245,87,108,0.5);
+                        border: none;
+                        color: #fff;
+                        width: 20px;
+                        height: 20px;
+                        border-radius: 50%;
+                        cursor: pointer;
+                        font-size: 12px;
+                    ">✕</button>
+                </div>
+            `).join('');
+        }
+        
+        function addQuickItem() {
+            const name = document.getElementById('newQuickItemName').value.trim();
+            const icon = document.getElementById('newQuickItemIcon').value.trim() || '📦';
+            const order = parseInt(document.getElementById('newQuickItemOrder').value) || 1;
+            
+            if (!name) {
+                alert('請輸入物品名稱');
+                return;
+            }
+            
+            const items = getQuickItems();
+            
+            // 檢查是否已存在
+            if (items.find(i => i.name === name)) {
+                showToast('物品已存在');
+                return;
+            }
+            
+            items.push({ name, icon, order });
+            items.sort((a, b) => a.order - b.order);
+            
+            saveQuickItems(items);
+            
+            document.getElementById('newQuickItemName').value = '';
+            document.getElementById('newQuickItemIcon').value = '';
+            
+            showToast(`已新增: ${icon} ${name}`);
+            loadQuickItems();
+        }
+        
+        function removeQuickItem(name) {
+            if (!confirm(`確定要移除「${name}」？`)) return;
+            
+            let items = getQuickItems();
+            items = items.filter(i => i.name !== name);
+            saveQuickItems(items);
+            
+            showToast(`已移除: ${name}`);
+            loadQuickItems();
+        }
+        
+        // 初始化
+        loadConfig();
+        loadAvailableCameras();
+        loadClasses();
+        loadSchedulerStatus();
+        loadQuickItems();
+    </script>
+</body>
+</html>

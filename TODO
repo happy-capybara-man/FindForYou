@@ -1,0 +1,13 @@
+技術選擇:
+YOLO-World
+YOLOv12
+
+data:
+去LVIS, Open Images V7抓出 含有眼鏡等等的data
+Copy-Paste Data Augmentation — 訓練階段的暴力解法
+
+拍要找的東西的照片*10 抽特徵 部屬時調整
+
+
+1. 鎖定關鍵類別
+不要訓練一個能辨識 1000 種東西的模型，那會讓手機跑不動且誤判率高。建議先鎖定老人最常丟的 Top 10：

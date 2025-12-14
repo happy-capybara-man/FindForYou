@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="使用 YOLO-World 智慧辨識，幫助您快速找到日常生活用品">
+    <title>日常物品搜尋助手 | Object Finder</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- 頂部導航 -->
+        <header class="header">
+            <div class="header-content">
+                <div class="logo">
+                    <span class="logo-icon">🔍</span>
+                    <h1>日常物品搜尋</h1>
+                </div>
+                <div class="status-indicator" id="statusIndicator">
+                    <span class="status-dot"></span>
+                    <span class="status-text">系統就緒</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- 主要內容區 -->
+        <main class="main-content">
+            <!-- 搜尋區塊 -->
+            <section class="search-section">
+                <div class="search-card glass-card">
+                    <h2 class="section-title">
+                        <span class="title-icon">💬</span>
+                        想找什麼東西？
+                    </h2>
+                    <div class="search-box">
+                        <input 
+                            type="text" 
+                            id="searchInput" 
+                            class="search-input" 
+                            placeholder="輸入物品名稱，例如：手機、遙控器..."
+                            autocomplete="off"
+                        >
+                        <button class="search-btn" id="searchBtn">
+                            <span class="btn-icon">🔍</span>
+                            <span class="btn-text">搜尋</span>
+                        </button>
+                        <button class="voice-btn" id="voiceBtn" title="語音輸入">
+                            <span class="btn-icon">🎤</span>
+                        </button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 搜尋結果區塊 -->
+            <section class="result-section" id="resultSection" style="display: none;">
+                <div class="result-card glass-card">
+                    <div class="result-header">
+                        <span class="result-icon" id="resultIcon">📍</span>
+                        <h3 class="result-title" id="resultTitle">搜尋結果</h3>
+                    </div>
+                    <div class="result-content">
+                        <p class="result-location" id="resultLocation">
+                            <!-- 動態填入位置資訊 -->
+                        </p>
+                        <p class="result-time" id="resultTime">
+                            <!-- 動態填入時間資訊 -->
+                        </p>
+                    </div>
+                    <div class="result-confidence" id="resultConfidence">
+                        <span class="confidence-label">信心度</span>
+                        <div class="confidence-bar">
+                            <div class="confidence-fill" id="confidenceFill"></div>
+                        </div>
+                        <span class="confidence-value" id="confidenceValue">0%</span>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 常用物品快捷按鈕 -->
+            <section class="quick-items-section">
+                <div class="glass-card">
+                    <h2 class="section-title">
+                        <span class="title-icon">⭐</span>
+                        常用物品
+                    </h2>
+                    <div class="quick-items-grid" id="quickItemsGrid">
+                        <button class="quick-item-btn" data-item="手機">
+                            <span class="item-icon">📱</span>
+                            <span class="item-name">手機</span>
+                        </button>
+                        <button class="quick-item-btn" data-item="鑰匙">
+                            <span class="item-icon">🔑</span>
+                            <span class="item-name">鑰匙</span>
+                        </button>
+                        <button class="quick-item-btn" data-item="眼鏡">
+                            <span class="item-icon">👓</span>
+                            <span class="item-name">眼鏡</span>
+                        </button>
+                        <button class="quick-item-btn" data-item="錢包">
+                            <span class="item-icon">👛</span>
+                            <span class="item-name">錢包</span>
+                        </button>
+                        <button class="quick-item-btn" data-item="耳機">
+                            <span class="item-icon">🎧</span>
+                            <span class="item-name">耳機</span>
+                        </button>
+                        <button class="quick-item-btn" data-item="遙控器">
+                            <span class="item-icon">📺</span>
+                            <span class="item-name">遙控器</span>
+                        </button>
+                        <button class="quick-item-btn" data-item="手錶">
+                            <span class="item-icon">⌚</span>
+                            <span class="item-name">手錶</span>
+                        </button>
+                        <button class="quick-item-btn" data-item="包包">
+                            <span class="item-icon">👜</span>
+                            <span class="item-name">包包</span>
+                        </button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 最近偵測到的物品 -->
+            <section class="recent-section">
+                <div class="glass-card">
+                    <h2 class="section-title">
+                        <span class="title-icon">🕐</span>
+                        最近偵測
+                    </h2>
+                    <div class="recent-list" id="recentList">
+                        <div class="empty-state">
+                            <span class="empty-icon">📭</span>
+                            <p>尚無偵測記錄</p>
+                            <p class="empty-hint">系統開始運行後，偵測到的物品會顯示在這裡</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <!-- 底部控制列 -->
+        <footer class="footer">
+            <div class="footer-content">
+                <!-- 攝影機選擇 -->
+                <div class="camera-select-wrapper" style="display:flex; align-items:center; gap:8px;">
+                    <label style="color:#aaa; font-size:12px;">📹</label>
+                    <select id="cameraSelect" style="
+                        background: rgba(255,255,255,0.1);
+                        border: 1px solid rgba(255,255,255,0.2);
+                        color: #fff;
+                        padding: 6px 12px;
+                        border-radius: 8px;
+                        font-size: 12px;
+                        cursor: pointer;
+                    ">
+                        <option value="0">攝影機 0</option>
+                    </select>
+                </div>
+                <button class="footer-btn" id="manualScanBtn">
+                    <span class="btn-icon">📷</span>
+                    <span class="btn-text">手動掃描</span>
+                </button>
+                <button class="footer-btn" id="historyBtn">
+                    <span class="btn-icon">📋</span>
+                    <span class="btn-text">歷史記錄</span>
+                </button>
+                <button class="footer-btn" id="clearDataBtn" style="color:#f5576c;">
+                    <span class="btn-icon">🗑️</span>
+                    <span class="btn-text">清空</span>
+                </button>
+                <button class="footer-btn" id="settingsBtn">
+                    <span class="btn-icon">⚙️</span>
+                    <span class="btn-text">設定</span>
+                </button>
+            </div>
+        </footer>
+    </div>
+
+    <!-- 載入動畫 -->
+    <div class="loading-overlay" id="loadingOverlay" style="display: none;">
+        <div class="loading-spinner">
+            <div class="spinner"></div>
+            <p class="loading-text">搜尋中...</p>
+        </div>
+    </div>
+
+    <!-- Toast 通知 -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <!-- JavaScript -->
+    <script src="js/db.js"></script>
+    <script src="js/api.js"></script>
+    <script src="js/ui.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>

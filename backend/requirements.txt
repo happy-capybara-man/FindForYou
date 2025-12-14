@@ -1,0 +1,15 @@
+# 找東西助手 - 後端依賴
+
+# Web 框架
+fastapi>=0.104.0
+uvicorn[standard]>=0.24.0
+
+# 資料驗證
+pydantic>=2.5.0
+
+# 電腦視覺
+ultralytics>=8.0.0
+opencv-python>=4.8.0
+
+# 工具
+python-multipart>=0.0.6

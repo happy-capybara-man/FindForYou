@@ -1,0 +1,34 @@
+{
+  "classes": [
+    "glasses",
+    "cell phone",
+    "wallet",
+    "keys",
+    "remote",
+    "book",
+    "cup",
+    "bottle",
+    "headphones",
+    "watch",
+    "bag",
+    "umbrella",
+    "scissors",
+    "pen"
+  ],
+  "class_names_zh": {
+    "glasses": "眼鏡",
+    "cell phone": "手機",
+    "wallet": "錢包",
+    "keys": "鑰匙",
+    "remote": "遙控器",
+    "book": "書",
+    "cup": "杯子",
+    "bottle": "水瓶",
+    "headphones": "耳機",
+    "watch": "手錶",
+    "bag": "包包",
+    "umbrella": "雨傘",
+    "scissors": "剪刀",
+    "pen": "筆"
+  }
+}

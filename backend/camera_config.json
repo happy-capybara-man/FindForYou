@@ -1,0 +1,15 @@
+{
+  "cameras": {
+    "0": {
+      "name": "攝影機 0",
+      "location": "客廳",
+      "enabled": true
+    },
+    "1": {
+      "name": "攝影機 1", 
+      "location": "臥室",
+      "enabled": true
+    }
+  },
+  "default_camera": 0
+}
